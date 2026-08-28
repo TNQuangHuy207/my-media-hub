@@ -8,11 +8,17 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background: #121212; color: #fff; display: flex; height: 100vh; overflow: hidden; }
         
-        .sidebar { width: 220px; background: #1e1e1e; padding: 20px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #2a2a2a; }
-        .sidebar h2 { font-size: 1.2rem; margin-bottom: 15px; color: #00adb5; }
+        /* Sidebar Navigation */
+        .sidebar { width: 250px; background: #1e1e1e; padding: 20px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #2a2a2a; }
+        .sidebar h2 { font-size: 1.2rem; margin-bottom: 10px; color: #00adb5; }
         .btn-category { background: #2a2a2a; color: #ccc; border: none; padding: 12px; text-align: left; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 500; }
         .btn-category:hover, .btn-category.active { background: #00adb5; color: #fff; }
 
+        .divider { height: 1px; background: #333; margin: 10px 0; }
+        .btn-action { background: #111; border: 1px solid #00adb5; color: #00adb5; padding: 10px; border-radius: 6px; cursor: pointer; text-align: center; font-weight: bold; transition: 0.2s; }
+        .btn-action:hover { background: #00adb5; color: #fff; }
+
+        /* Main Content */
         .main-content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
         .player-container { background: #000; border-radius: 10px; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 380px; border: 1px solid #333; }
         audio { width: 80%; }
@@ -20,24 +26,44 @@
         iframe { width: 100%; height: 480px; border: none; }
         img.preview { max-width: 100%; max-height: 450px; object-fit: contain; }
 
+        /* Playlist */
         .playlist { background: #1e1e1e; border-radius: 10px; padding: 15px; flex: 1; border: 1px solid #2a2a2a; }
         .playlist h3 { margin-bottom: 12px; font-size: 1rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #2a2a2a; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
         .item:hover { background: #353535; }
         .item.playing { background: #264e52; border-left: 4px solid #00adb5; }
         .badge { background: #111; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; color: #00adb5; }
+
+        /* Modal Overlay & Popup */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: #1e1e1e; padding: 25px; border-radius: 10px; width: 480px; border: 1px solid #333; display: flex; flex-direction: column; gap: 12px; }
+        .modal h3 { color: #00adb5; font-size: 1.1rem; }
+        .modal label { font-size: 0.85rem; color: #aaa; margin-bottom: -6px; }
+        .modal input, .modal select, .modal textarea { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; color: #fff; font-size: 0.9rem; }
+        .modal textarea { height: 150px; font-family: monospace; font-size: 0.8rem; }
+        .modal-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        .btn-submit { background: #00adb5; border: none; padding: 10px 18px; color: #fff; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-cancel { background: #444; border: none; padding: 10px 18px; color: #fff; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
 
+    <!-- Sidebar -->
     <div class="sidebar">
         <h2>📁 Media Hub</h2>
         <button class="btn-category active" onclick="filterCategory('all', event)">Tất cả</button>
         <button class="btn-category" onclick="filterCategory('audio', event)">🎵 Âm nhạc</button>
         <button class="btn-category" onclick="filterCategory('video', event)">🎬 Video</button>
         <button class="btn-category" onclick="filterCategory('images', event)">🖼️ Hình ảnh</button>
+
+        <div class="divider"></div>
+
+        <button class="btn-action" onclick="openModal('addModal')">➕ Thêm Media Mới</button>
+        <button class="btn-action" style="border-color: #ff9800; color: #ff9800;" onclick="openExportModal()">📋 Lấy JSON Sync GitHub</button>
     </div>
 
+    <!-- Main Content -->
     <div class="main-content">
         <div class="player-container" id="playerWindow">
             <p style="color: #666;">Chọn một item bên dưới để phát</p>
@@ -49,33 +75,88 @@
         </div>
     </div>
 
+    <!-- Modal Form Thêm Media -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal">
+            <h3>➕ Thêm Media Mới</h3>
+            
+            <label>Tiêu đề Media:</label>
+            <input type="text" id="inputTitle" placeholder="Ví dụ: Nhạc Chill Lofi 2026">
+
+            <label>Danh mục (Category):</label>
+            <select id="inputCategory">
+                <option value="audio">🎵 Âm nhạc</option>
+                <option value="video">🎬 Video</option>
+                <option value="images">🖼️ Hình ảnh</option>
+            </select>
+
+            <label>Loại trình phát (Type):</label>
+            <select id="inputType">
+                <option value="audio">Audio (MP3, WAV)</option>
+                <option value="video">Video Trực Tiếp (MP4, WebM)</option>
+                <option value="youtube">Video YouTube Embed</option>
+                <option value="image">Hình Ảnh (JPG, PNG)</option>
+            </select>
+
+            <label>Đường dẫn File (URL hoặc path nội bộ):</label>
+            <input type="text" id="inputSrc" placeholder="Ví dụ: media/audio/song.mp3 hoặc https://...">
+
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal('addModal')">Hủy</button>
+                <button class="btn-submit" onclick="addNewMedia()">Thêm Vào Danh Sách</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Export JSON -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal">
+            <h3>📋 Đồng Bộ Lên GitHub</h3>
+            <p style="font-size: 0.85rem; color: #ccc;">Copy toàn bộ mã dưới đây và dán đè vào file <b>data.json</b> trên GitHub để lưu vĩnh viễn:</p>
+            <textarea id="jsonOutput" readonly></textarea>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal('exportModal')">Đóng</button>
+                <button class="btn-submit" onclick="copyJsonCode()">Copy Mã JSON</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let mediaData = [];
+        let baseMediaData = [];
+        let localMediaData = JSON.parse(localStorage.getItem('custom_media_items')) || [];
+        let combinedData = [];
         let currentPlaylist = [];
         let currentIndex = 0;
 
+        // 1. Tải dữ liệu từ data.json và gộp với dữ liệu tạo từ trình duyệt
         async function loadMedia() {
             try {
                 const res = await fetch('data.json');
-                mediaData = await res.json();
-                currentPlaylist = mediaData;
-                renderPlaylist();
+                baseMediaData = await res.json();
             } catch (e) {
-                document.getElementById('playlistItems').innerHTML = "Không thể tải data.json. Kiểm tra lại cấu trúc file.";
+                baseMediaData = [];
             }
+            updateCombinedData();
+            filterCategory('all');
         }
 
+        function updateCombinedData() {
+            combinedData = [...baseMediaData, ...localMediaData];
+        }
+
+        // 2. Lọc theo danh mục
         function filterCategory(cat, evt) {
             document.querySelectorAll('.btn-category').forEach(b => b.classList.remove('active'));
             if (evt) evt.target.classList.add('active');
 
-            if (cat === 'all') currentPlaylist = mediaData;
-            else currentPlaylist = mediaData.filter(item => item.category === cat);
+            if (cat === 'all') currentPlaylist = combinedData;
+            else currentPlaylist = combinedData.filter(item => item.category === cat);
 
             currentIndex = 0;
             renderPlaylist();
         }
 
+        // 3. Hiển thị Playlist
         function renderPlaylist() {
             const listContainer = document.getElementById('playlistItems');
             listContainer.innerHTML = '';
@@ -97,6 +178,7 @@
             });
         }
 
+        // 4. Phát Media
         function playMedia(index) {
             currentIndex = index;
             renderPlaylist();
@@ -121,6 +203,54 @@
                     }
                 };
             }
+        }
+
+        // 5. Thêm Media Mới từ Form
+        function addNewMedia() {
+            const title = document.getElementById('inputTitle').value.trim();
+            const category = document.getElementById('inputCategory').value;
+            const type = document.getElementById('inputType').value;
+            const src = document.getElementById('inputSrc').value.trim();
+
+            if (!title || !src) {
+                alert('Vui lòng điền đầy đủ Tiêu đề và Đường dẫn file!');
+                return;
+            }
+
+            const newItem = {
+                id: Date.now(),
+                title: title,
+                category: category,
+                type: type,
+                src: src
+            };
+
+            localMediaData.push(newItem);
+            localStorage.setItem('custom_media_items', JSON.stringify(localMediaData));
+            
+            updateCombinedData();
+            filterCategory('all');
+            closeModal('addModal');
+
+            // Reset Form inputs
+            document.getElementById('inputTitle').value = '';
+            document.getElementById('inputSrc').value = '';
+        }
+
+        // Modal Controls
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function openExportModal() {
+            document.getElementById('jsonOutput').value = JSON.stringify(combinedData, null, 2);
+            openModal('exportModal');
+        }
+
+        function copyJsonCode() {
+            const textarea = document.getElementById('jsonOutput');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Đã copy mã JSON thành công! Bạn có thể dán vào file data.json trên GitHub.');
         }
 
         loadMedia();
