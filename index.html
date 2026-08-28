@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Media Hub</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: #121212; color: #fff; display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar { width: 220px; background: #1e1e1e; padding: 20px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #2a2a2a; }
+        .sidebar h2 { font-size: 1.2rem; margin-bottom: 15px; color: #00adb5; }
+        .btn-category { background: #2a2a2a; color: #ccc; border: none; padding: 12px; text-align: left; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 500; }
+        .btn-category:hover, .btn-category.active { background: #00adb5; color: #fff; }
+
+        .main-content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .player-container { background: #000; border-radius: 10px; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 380px; border: 1px solid #333; }
+        audio { width: 80%; }
+        video { width: 100%; max-height: 480px; }
+        iframe { width: 100%; height: 480px; border: none; }
+        img.preview { max-width: 100%; max-height: 450px; object-fit: contain; }
+
+        .playlist { background: #1e1e1e; border-radius: 10px; padding: 15px; flex: 1; border: 1px solid #2a2a2a; }
+        .playlist h3 { margin-bottom: 12px; font-size: 1rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #2a2a2a; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
+        .item:hover { background: #353535; }
+        .item.playing { background: #264e52; border-left: 4px solid #00adb5; }
+        .badge { background: #111; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; color: #00adb5; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>📁 Media Hub</h2>
+        <button class="btn-category active" onclick="filterCategory('all', event)">Tất cả</button>
+        <button class="btn-category" onclick="filterCategory('audio', event)">🎵 Âm nhạc</button>
+        <button class="btn-category" onclick="filterCategory('video', event)">🎬 Video</button>
+        <button class="btn-category" onclick="filterCategory('images', event)">🖼️ Hình ảnh</button>
+    </div>
+
+    <div class="main-content">
+        <div class="player-container" id="playerWindow">
+            <p style="color: #666;">Chọn một item bên dưới để phát</p>
+        </div>
+
+        <div class="playlist">
+            <h3>Danh sách phát</h3>
+            <div id="playlistItems">Đang tải dữ liệu...</div>
+        </div>
+    </div>
+
+    <script>
+        let mediaData = [];
+        let currentPlaylist = [];
+        let currentIndex = 0;
+
+        async function loadMedia() {
+            try {
+                const res = await fetch('data.json');
+                mediaData = await res.json();
+                currentPlaylist = mediaData;
+                renderPlaylist();
+            } catch (e) {
+                document.getElementById('playlistItems').innerHTML = "Không thể tải data.json. Kiểm tra lại cấu trúc file.";
+            }
+        }
+
+        function filterCategory(cat, evt) {
+            document.querySelectorAll('.btn-category').forEach(b => b.classList.remove('active'));
+            if (evt) evt.target.classList.add('active');
+
+            if (cat === 'all') currentPlaylist = mediaData;
+            else currentPlaylist = mediaData.filter(item => item.category === cat);
+
+            currentIndex = 0;
+            renderPlaylist();
+        }
+
+        function renderPlaylist() {
+            const listContainer = document.getElementById('playlistItems');
+            listContainer.innerHTML = '';
+
+            if (currentPlaylist.length === 0) {
+                listContainer.innerHTML = '<p style="color:#666">Chưa có dữ liệu trong mục này.</p>';
+                return;
+            }
+
+            currentPlaylist.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `item ${index === currentIndex ? 'playing' : ''}`;
+                div.innerHTML = `
+                    <span>${item.title}</span>
+                    <span class="badge">${item.type.toUpperCase()}</span>
+                `;
+                div.onclick = () => playMedia(index);
+                listContainer.appendChild(div);
+            });
+        }
+
+        function playMedia(index) {
+            currentIndex = index;
+            renderPlaylist();
+            const item = currentPlaylist[index];
+            const windowEl = document.getElementById('playerWindow');
+
+            if (item.type === 'audio') {
+                windowEl.innerHTML = `<audio id="activePlayer" controls autoplay src="${item.src}"></audio>`;
+            } else if (item.type === 'video') {
+                windowEl.innerHTML = `<video id="activePlayer" controls autoplay src="${item.src}"></video>`;
+            } else if (item.type === 'image') {
+                windowEl.innerHTML = `<img class="preview" src="${item.src}" alt="${item.title}" />`;
+            } else if (item.type === 'youtube') {
+                windowEl.innerHTML = `<iframe src="${item.src}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+            }
+
+            const player = document.getElementById('activePlayer');
+            if (player) {
+                player.onended = () => {
+                    if (currentIndex + 1 < currentPlaylist.length) {
+                        playMedia(currentIndex + 1);
+                    }
+                };
+            }
+        }
+
+        loadMedia();
+    </script>
+</body>
+</html>
